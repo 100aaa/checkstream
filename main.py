@@ -64,7 +64,7 @@ def main(argv=sys.argv):
     stream_check.daemon = True
     stream_check.start()
     while stream_check.is_alive:
-        time.sleep(0)
+        time.sleep(1)
 
 
 class StreamCheck(threading.Thread):
@@ -144,7 +144,7 @@ class StreamCheck(threading.Thread):
                 os.system('shutdown -t 5 -r -f')
                 break
 
-            time.sleep(15)
+            time.sleep(30)
 
 
 if __name__ == '__main__':
