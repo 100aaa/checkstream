@@ -5,6 +5,7 @@ import time
 import re
 import codecs
 import signal
+from datetime import datetime
 VERSION = 'v1.0.0'
 
 
@@ -117,11 +118,6 @@ class StreamCheck(threading.Thread):
                         f.write('')
                         f.close()
 
-            if self.__reboot_count <= reboot_count:
-                print ('reboot in 5 seconds')
-                os.system('shutdown -t 5 -r -f')
-                break
-
             print ('current hashrate: {hashrate} target hashrate: {target_hashrate} status: {status}'.format(
                 hashrate=hashrate,
                 target_hashrate=self.__target_hashrate,
@@ -134,6 +130,19 @@ class StreamCheck(threading.Thread):
                     not_passed_count=reboot_count,
                     reboot_count=self.__reboot_count
                 )
+
+            if self.__reboot_count <= reboot_count:
+                err_logfile = os.path.join(application_path, 'streamcheck' + datetime.today().strftime('%Y%m%d%H%M%S') + '.log')
+                with open(err_logfile, 'w') as f:
+                    f.write('current hashrate: {hashrate} target hashrate: {target_hashrate} reboot_count: {reboot_count}'.format(
+                        hashrate=hashrate,
+                        target_hashrate=self.__target_hashrate,
+                        reboot_count=reboot_count
+                    ))
+                    f.close()
+                print ('reboot in 5 seconds')
+                os.system('shutdown -t 5 -r -f')
+                break
 
             time.sleep(15)
 
