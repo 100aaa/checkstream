@@ -3,6 +3,7 @@ import sys
 import threading
 import time
 import re
+import codecs
 
 
 def main(argv=sys.argv):
@@ -43,11 +44,11 @@ class CheckStream(threading.Thread):
         while True:
             files = sorted(filter(os.path.isfile, os.listdir('.')), key=os.path.getmtime, reverse=True)
             files = [f for f in files if '.log' in f or '.txt' in f]
-            found = False
+            passed = False
             hashrate = 0
             if len(files) > 0:
                 log_file = os.path.join(sys.path[0], files[0])
-                with open(log_file, encoding='utf-8', errors='ignore') as f:
+                with codecs.open(log_file, encoding='utf-8', errors='ignore') as f:
                     for line in reversed(f.readlines()):
                         line = line.rstrip()
                         separator = None
@@ -62,24 +63,26 @@ class CheckStream(threading.Thread):
                         hashrate = int(floats[0].split('.')[0]) if len(floats) > 0 else 0
                         if self.__hashrate > 0 and hashrate < self.__hashrate or hashrate < 20:
                             self.__violated += 1
-                        found = True
+                        else:
+                            passed = True
                         break
                     f.close()
-                if found:
-                    if 'pheonix.log' in log_file or 'claymore.log' in log_file:
-                        self.__violated = 0
-                    else:
-                        with open(log_file, 'w') as f:
-                            f.write('')
-                            f.close()
-                        self.__violated = 0
+
+            if passed:
+                if 'pheonix.log' in log_file or 'claymore.log' in log_file:
+                    self.__violated = 0
                 else:
-                    self.__violated += 1
+                    with open(log_file, 'w') as f:
+                        f.write('')
+                        f.close()
+                        self.__violated = 0
             else:
-                print ('unable to find the log file')
                 self.__violated += 1
+                print ('not passed count: ' + str(self.__violated))
 
             if self.__violated >= 3:
+                print ('reboot in 5 seconds')
+                time.sleep(5)
                 os.system('reboot')
                 break
 
@@ -87,7 +90,7 @@ class CheckStream(threading.Thread):
                 hashrate=hashrate,
                 target=self.__hashrate
             ))
-            time.sleep(30)
+            time.sleep(15)
 
 
 if __name__ == '__main__':
