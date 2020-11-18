@@ -5,6 +5,7 @@ import time
 import re
 import codecs
 import signal
+VERSION = 'v1.0.0'
 
 
 def signal_handler(signal, frame):
@@ -13,6 +14,7 @@ def signal_handler(signal, frame):
 
 
 def main(argv=sys.argv):
+    global VERSION
     signal.signal(signal.SIGINT, signal_handler)
 
     # parameter check
@@ -29,6 +31,11 @@ def main(argv=sys.argv):
                '\n\t\t\t[-l {delete_log} | default: 0,  {0, 1} | 0: delete log, 1: keep log]'
                '\n\t\t\t[-c {reboot counts} | default: 3, 0~any number | if it fails to pass the checkup {reboot counts} times in a row, miner will be rebooted]')
         return
+
+    if len(args) > 0 and args[0] == '--version':
+        print (VERSION)
+        return
+
     elif len(args) % 2 != 0:
         print ('invalid number of parameters')
         return
