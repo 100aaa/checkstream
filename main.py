@@ -47,7 +47,7 @@ class CheckStream(threading.Thread):
             hashrate = 0
             if len(files) > 0:
                 log_file = os.path.join(sys.path[0], files[0])
-                with open(log_file) as f:
+                with open(log_file, encoding='utf-8', errors='ignore') as f:
                     for line in reversed(f.readlines()):
                         line = line.rstrip()
                         separator = None
