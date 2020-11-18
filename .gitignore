@@ -2,3 +2,8 @@
 *.iml
 env
 *.log
+*.txt
+*.spec
+build
+__pycache__
+pyinstaler-windows
