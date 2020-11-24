@@ -6,7 +6,7 @@ import signal
 from datetime import datetime
 import socket
 import json
-VERSION = 'v1.0.1'
+VERSION = 'v1.0.2'
 
 
 def signal_handler(signal, frame):
@@ -21,10 +21,10 @@ def main(argv=sys.argv):
     # parameter check
     options = ['-h', '-c', '-p', '-i', '-psw']
     target_hashrate = 0
-    reboot_count = 3
+    reboot_count = 5
     port = 3333
     password = ''
-    interval = 10
+    interval = 15
 
     args = argv[1:]
 
