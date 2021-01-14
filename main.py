@@ -128,14 +128,14 @@ class StreamCheck(threading.Thread):
                 self.copy_profile_relaunch(profile['directory'])
                 profile['done'] = True
 
-        print ('waiting...')
-
         while True:
             hashrate = self.get_hashrate(response)
             if hashrate > 0:
                 break
             else:
                 time.sleep(5)
+                print ('waiting... (' + str(hashrate) + ')')
+            response = self.get_response()
 
         print ('hashrate checkup has started.')
         reboot_count = 0
@@ -249,8 +249,14 @@ class StreamCheck(threading.Thread):
         after_burner_path =  os.path.join('c:\\', 'Program Files (x86)', 'MSI Afterburner')
         try:
             os.system('taskkill /F /IM MSIAfterburner.exe /T')
+        except Exception as err:
+            print (err)
+        try:
             os.chdir(after_burner_path)
             os.system('copy ' + directory + ' Profiles /Y')
+        except Exception as err:
+            print (err)
+        try:
             os.system('start MSIAfterburner.exe')
         except Exception as err:
             print (err)
