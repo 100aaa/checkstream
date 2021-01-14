@@ -7,7 +7,7 @@ from datetime import datetime
 import socket
 import json
 
-VERSION = 'v1.0.3'
+VERSION = 'v1.0.4'
 
 
 def signal_handler(signal, frame):
