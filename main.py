@@ -20,12 +20,13 @@ def main(argv=sys.argv):
     signal.signal(signal.SIGINT, signal_handler)
 
     # parameter check
-    options = ['-h', '-c', '-p', '-i', '-psw', '-msi']
+    options = ['-h', '-c', '-p', '-i', '-psw', '-msi', '-is']
     target_hashrate = 0
     reboot_count = 5
     port = 3333
     password = ''
     interval = 20
+    incorrect_share = -1
     msi_profiles = []
 
     args = argv[1:]
@@ -36,7 +37,9 @@ def main(argv=sys.argv):
                '\n\t\t\t-p {port} | default: 3333 [0-65535] | cdm port'
                '\n\t\t\t-psw {password} | default: "" | cdm password'
                '\n\t\t\t-i {interval} | default : 10 | hashrate check interval'
-               '\n\t\t\t-msi {msi_profiles} | default "" | -msi 0:Profile1, 100:Profile2')
+               '\n\t\t\t-msi {msi_profiles} | default "" | -msi 0:Profile1, 100:Profile2'
+               '\n\t\t\t-is {incorrect shares} | default "" | reboot if it reaches to the number of incorrect shares provided'
+               )
         return
 
     if len(args) > 0 and (args[0] == '--version' or args[0] == 'v'):
@@ -75,6 +78,8 @@ def main(argv=sys.argv):
             port = int(value)
         if option == '-psw':
             password = value
+        if option == '-is':
+            incorrect_share = int(value)
         if option == '-msi':
             values = value.split(',')
             for v in values:
@@ -94,7 +99,8 @@ def main(argv=sys.argv):
                                interval=interval,
                                port=port,
                                password=password,
-                               msi_profiles=msi_profiles)
+                               msi_profiles=msi_profiles,
+                               incorrect_share=incorrect_share)
     stream_check.daemon = True
     stream_check.start()
     while stream_check.is_alive:
@@ -102,13 +108,14 @@ def main(argv=sys.argv):
 
 
 class StreamCheck(threading.Thread):
-    def __init__(self, target_hashrate=0, reboot_count=3, interval=30, port=3333, password='', msi_profiles=[]):
+    def __init__(self, target_hashrate=0, reboot_count=3, interval=30, port=3333, password='', msi_profiles=[], incorrect_share=-1):
         self.__target_hashrate = target_hashrate
         self.__reboot_count = reboot_count
         self.__port = port
         self.__interval = interval
         self.__password = password
         self.__msi_profiles = msi_profiles
+        self.__incorrect_share = incorrect_share
         self.__initial = True
 
         threading.Thread.__init__(self)
@@ -146,6 +153,7 @@ class StreamCheck(threading.Thread):
             response = self.get_response()
             hashrate = self.get_hashrate(response)
             share = self.get_share(response)
+            incorrect_share = self.get_incorrect_share(response)
 
             if share < previous_share:
                 for profile in  self.__msi_profiles:
@@ -162,10 +170,11 @@ class StreamCheck(threading.Thread):
                     self.copy_profile_relaunch(profile['directory'])
                     profile['done'] = True
 
-            print ('current hashrate: {hashrate} target hashrate: {target_hashrate} share: {share} status: {status}'.format(
+            print ('current hashrate: {hashrate} target hashrate: {target_hashrate} share: {share} incorrect shares: {incorrect_share} status: {status}'.format(
                 hashrate=hashrate,
                 target_hashrate=self.__target_hashrate,
                 share=share,
+                incorrect_share=incorrect_share,
                 status='OK' if passed else 'ERR'
             ))
 
@@ -176,15 +185,16 @@ class StreamCheck(threading.Thread):
                     reboot_count=self.__reboot_count
                 ))
 
-            if self.__reboot_count <= reboot_count:
+            if self.__reboot_count <= reboot_count or (self.__incorrect_share > 0 and self.__incorrect_share <= incorrect_share):
                 err_logfile = os.path.join(application_path, 'streamcheck.log')
                 timestamp = datetime.today().strftime('%Y%m%d%H%M%S')
                 with open(err_logfile, 'a') as f:
-                    f.write('{timestamp}: current hashrate: {hashrate} target hashrate: {target_hashrate} shares found: {share} reboot_count: {reboot_count}'.format(
+                    f.write('{timestamp}: current hashrate: {hashrate} target hashrate: {target_hashrate} shares found: {share} incorrect_share: {incorrect_share} reboot_count: {reboot_count}'.format(
                         timestamp=timestamp,
                         hashrate=hashrate,
                         target_hashrate=self.__target_hashrate,
                         share=share,
+                        incorrect_share=incorrect_share,
                         reboot_count=reboot_count
                     ))
                     f.close()
@@ -244,6 +254,17 @@ class StreamCheck(threading.Thread):
         except Exception as err:
             print ('parsing error')
             return 0
+
+    def get_incorrect_share(self, response):
+        if response == '':
+            return -1
+        try:
+            result = response['result']
+            incorrect = int(result[8].split(';')[0])
+            return incorrect
+        except Exception as err:
+            print ('parsing error')
+            return -1
 
     def copy_profile_relaunch(self, directory):
         after_burner_path =  os.path.join('c:\\', 'Program Files (x86)', 'MSI Afterburner')
